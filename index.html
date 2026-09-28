@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PES Yearbook Desk</title>
+<style>
+:root{
+  --ink:#202124; --muted:#202124; --line:#d7d9de; --soft:#f7f8fa; --paper:#fff;
+  --accent:#5b3f92; --accent-soft:#f1edf8; --focus:#0b57d0;
+}
+*{box-sizing:border-box}
+html{font-size:18px}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Atkinson Hyperlegible","Lexend",Arial,sans-serif;line-height:1.5}
+button,select,input,textarea{font:inherit;color:inherit}
+button,select{
+  min-height:46px;background:#fff;border:2px solid #b9bdc5;border-radius:7px;padding:8px 13px;
+}
+button{cursor:pointer;font-weight:700}
+button:hover,select:hover{border-color:#70757a}
+button:focus-visible,select:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.skip{position:absolute;left:-9999px;top:0}
+.skip:focus{left:12px;top:12px;background:#fff;padding:10px;border:2px solid var(--ink);z-index:99}
+header{border-bottom:1px solid var(--line);padding:20px 30px 12px}
+.brand{font-size:1.3rem;font-weight:800}.subtitle{font-size:.82rem;color:var(--muted);margin-top:2px}
+.header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.deadline-glance{text-align:left;border:2px solid var(--ink);border-radius:10px;padding:10px 13px;min-width:285px;background:#fff}
+.deadline-label{font-size:.68rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px}
+.milestone{display:flex;justify-content:space-between;gap:18px;font-size:.76rem;line-height:1.5}
+.milestone span{font-weight:700}
+.milestone strong{font-weight:900;white-space:nowrap}
+.cost-row{border-top:1px solid var(--ink);margin-top:5px;padding-top:5px}
+@media(max-width:620px){.header-top{align-items:stretch}}
+.yearbook-info{margin-top:24px}
+.yearbook-info h2{font-size:.9rem;letter-spacing:.06em;margin:0 0 9px;font-weight:900}
+.info-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.info-table th,.info-table td{border:1px solid var(--line);padding:12px 14px;text-align:left;color:var(--ink)}
+.info-table th{font-size:.74rem;font-weight:900;background:var(--soft)}
+.info-table td{font-size:.95rem;font-weight:900}
+@media(max-width:700px){.info-table{min-width:720px}.yearbook-info{overflow-x:auto}}
+.tabs{display:flex;gap:24px;margin-top:14px}
+.tab{min-height:40px;border:0;padding:5px 2px 8px;border-radius:0;background:transparent;color:var(--muted)}
+.tab.active{background:transparent;color:var(--ink);border-bottom:3px solid var(--accent)}
+.editor-link{display:inline-flex;align-items:center;min-height:40px;padding:5px 12px 8px;border:2px solid var(--accent);border-radius:7px;text-decoration:none;color:var(--accent);font-weight:800}
+.editor-link:hover{background:var(--accent-soft)}
+.editor-link:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.toolbar{display:flex;align-items:center;gap:10px;padding:16px 30px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.toolbar .spacer{flex:1}
+.period{min-width:310px;text-align:center;font-weight:900;font-size:1.65rem;line-height:1.15;letter-spacing:.01em}
+main{padding:22px 30px 36px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px}
+.calendar{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.weekdays,.grid{display:grid;grid-template-columns:repeat(5,1fr)}
+.weekdays{background:var(--soft)}
+.weekdays div{padding:13px;border-right:1px solid var(--line);font-size:.84rem;font-weight:900;color:var(--ink)}
+.weekdays div:last-child{border-right:0}
+.day{min-height:175px;border-top:1px solid var(--line);border-right:1px solid var(--line);padding:12px;background:#fff}
+.day:nth-child(5n){border-right:0}
+.day.out{background:#fafafa;color:var(--ink)}
+.date{font-size:1.05rem;font-weight:900;margin-bottom:10px;color:var(--ink)}
+.event{position:relative;border:1px solid #cfd2d8;border-radius:9px;padding:10px;margin:7px 0;background:#fff}.event.has-info{padding-right:48px}
+.event-title{font-weight:800;font-size:.92rem;line-height:1.3}
+.event-meta{margin-top:4px;color:var(--muted);font-size:.82rem;line-height:1.35}
+.location{font-weight:700;color:var(--ink)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tag{display:inline-block;border-radius:7px;padding:3px 8px;font-size:.72rem;font-weight:800;border:2px solid rgba(0,0,0,.18);line-height:1.25}
+.unassigned{background:#fff;border:2px dashed #70757a;color:var(--ink)}
+.sidebar{border:1px solid var(--line);border-radius:12px;padding:18px;height:max-content;background:#fff}
+.sidebar h2,.assignments h2{font-size:.92rem;margin:0 0 12px;font-weight:800}
+.summary{font-size:.78rem;color:var(--muted);padding-bottom:12px;border-bottom:1px solid var(--line)}
+.todo{padding:14px 0;border-bottom:1px solid #e5e7eb}
+.todo:last-child{border-bottom:0}
+.todo-title{font-size:.9rem;font-weight:800}
+.due{font-size:.8rem;color:var(--muted);margin-top:4px}
+.assignments{display:none;max-width:1000px}
+.person{border-top:1px solid var(--line);padding:16px 0;display:grid;grid-template-columns:170px 1fr;gap:18px}
+.person:first-of-type{border-top:0}
+.item{font-size:.9rem;margin-bottom:9px}
+.admin-note{display:none;max-width:1100px}
+.admin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.admin-card{border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff}
+.admin-card h2{font-size:1rem;margin:0 0 14px}
+.field{margin-bottom:13px}
+.field label{display:block;font-weight:800;font-size:.82rem;margin-bottom:5px}
+.field input,.field textarea,.field select{width:100%;border:2px solid #b9bdc5;border-radius:7px;padding:9px;min-height:44px;background:#fff}
+.field textarea{min-height:80px;resize:vertical}
+.field input:focus-visible,.field textarea:focus-visible,.field select:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.checks{display:flex;flex-wrap:wrap;gap:7px}
+.check-option{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:.8rem}
+.check-option input{width:18px;height:18px}
+.primary{background:var(--accent);color:#fff;border-color:var(--accent);width:100%}
+.roster-list{margin-top:14px;border-top:1px solid var(--line)}
+.roster-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.small-btn{min-height:36px;padding:5px 9px;font-size:.75rem}
+.help{font-size:.76rem;color:var(--muted);margin-top:-5px;margin-bottom:12px}
+.volunteer-btn{margin-top:8px;min-height:38px;padding:5px 9px;font-size:.76rem;border-color:var(--accent);color:var(--accent)}
+.volunteer-panel{margin-top:8px;padding:10px;background:var(--accent-soft);border-radius:8px}
+.volunteer-panel label{display:block;font-size:.75rem;font-weight:800;margin-bottom:5px}
+.volunteer-panel select{width:100%;min-height:40px;font-size:.78rem;margin-bottom:7px}
+.volunteer-panel button{width:100%;min-height:40px;font-size:.78rem;background:var(--accent);color:#fff;border-color:var(--accent)}
+.request-card{padding:12px 0;border-bottom:1px solid var(--line)}
+.request-card:last-child{border-bottom:0}
+.request-title{font-weight:800;font-size:.86rem}
+.request-meta{font-size:.78rem;color:var(--muted);margin:3px 0 8px}
+.request-actions{display:flex;gap:7px;flex-wrap:wrap}
+.approve{background:var(--accent);color:#fff;border-color:var(--accent)}
+.status-msg{font-size:.76rem;margin-top:7px;font-weight:700}
+.info-btn{position:absolute;top:8px;right:8px;width:30px;height:30px;min-height:30px;padding:0;border:2px solid var(--ink);border-radius:50%;background:#fff;color:var(--ink);font-family:Georgia,serif;font-size:.9rem;font-weight:700;font-style:italic;line-height:26px;text-align:center}
+.info-btn:hover{background:var(--soft)}
+.info-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.instructions-popover{position:absolute;top:43px;right:8px;z-index:15;width:min(300px,calc(100vw - 60px));padding:13px 14px;border:2px solid var(--ink);border-radius:9px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:.82rem;line-height:1.45}
+.instructions-popover strong{display:block;margin-bottom:5px;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+.deadline-urgent{font-weight:900;color:#8a1c1c}
+.todo-actions{margin-top:8px}
+.complete-btn{min-height:38px;padding:5px 10px;font-size:.76rem}
+.completed-wrap{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+.completed-item{padding:10px 0;border-bottom:1px solid var(--line);font-size:.86rem}
+.print-menu{position:relative}
+.print-options{display:none;position:absolute;right:0;top:50px;width:220px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:20}
+.print-options.open{display:block}
+.print-options button{width:100%;border:0;text-align:left;min-height:40px}
+.print-options button:hover{background:var(--soft)}
+@media print{.print-options{display:none!important}}
+.auth-area{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:.75rem;font-weight:800}
+.auth-area button{min-height:38px;padding:5px 10px}
+.admin-gate{max-width:520px;border:2px solid var(--ink);border-radius:10px;padding:20px;background:#fff}
+.admin-gate h2{margin-top:0}
+.data-status{font-size:.76rem;font-weight:800;margin:8px 0 0}
+@media(max-width:950px){.admin-grid{grid-template-columns:1fr}.auth-area{width:100%;margin-left:0}}
+.empty{color:var(--muted);font-size:.88rem;padding:18px 0}
+.view-label{font-weight:700;font-size:.9rem}
+@media(max-width:950px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{order:-1}
+}
+@media(max-width:700px){
+  html{font-size:17px}
+  header,.toolbar,main{padding-left:16px;padding-right:16px}
+  .weekdays,.grid{min-width:820px}
+  .calendar-wrap{overflow-x:auto;padding-bottom:4px}
+  .day{min-height:155px}
+}
+@media print{
+  html{font-size:14px}
+  header .tabs,.toolbar button,.toolbar select,.toolbar label,.admin-note{display:none!important}
+  header{padding:0 0 10px;border:0}
+  .toolbar{padding:0 0 10px;border:0}
+  main{padding:0}
+  .layout{grid-template-columns:1fr 240px;gap:12px}
+  .day{min-height:110px;padding:7px}
+  .event{padding:5px}
+  .sidebar{padding:10px}
+  @page{size:landscape;margin:.35in}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to calendar</a>
+<header>
+  <div class="header-top">
+    <div><div class="brand">PES Yearbook Desk</div><div class="subtitle">Coverage, assignments, and deadlines.</div></div>
+
+  </div>
+  <nav class="tabs" aria-label="Main navigation">
+    <button class="tab active" data-tab="calendar">Calendar</button>
+    <button class="tab" data-tab="assignments">Assignments</button>
+    <a class="editor-link" href="https://web.treering.com/" target="_blank" rel="noopener noreferrer">Edit Yearbook</a>
+    <button class="tab" data-tab="admin">Admin</button>
+    <div class="auth-area"><button id="signInBtn" type="button">Advisor Sign In</button><span id="authStatus" aria-live="polite"></span><button id="signOutBtn" type="button" hidden>Sign Out</button></div>
+  </nav>
+</header>
+
+<div class="toolbar">
+  <button id="prev" aria-label="Previous period">Previous</button>
+  <div class="period" id="period" aria-live="polite"></div>
+  <button id="next" aria-label="Next period">Next</button>
+  <div class="spacer"></div>
+  <label class="view-label" for="studentFilter">View</label>
+  <select id="studentFilter" aria-label="Filter by student"></select>
+  <button id="weekBtn">Week</button>
+  <button id="monthBtn" class="active">Month</button>
+  <div class="print-menu"><button id="printBtn" aria-expanded="false">Print</button>
+<div class="print-options" id="printOptions">
+<button type="button" data-print="week">This Week</button>
+<button type="button" data-print="month">This Month</button>
+<button type="button" data-print="assignments">My Assignments</button>
+<button type="button" data-print="team">Whole Team</button>
+</div></div>
+</div>
+
+<main id="main">
+  <section id="calendarView">
+    <div class="layout">
+      <div class="calendar-wrap">
+        <div class="calendar" aria-label="Yearbook calendar">
+          <div class="weekdays" aria-hidden="true">
+            <div>MONDAY</div><div>TUESDAY</div><div>WEDNESDAY</div><div>THURSDAY</div><div>FRIDAY</div>
+          </div>
+          <div class="grid" id="calendarGrid"></div>
+        </div>
+      </div>
+      <aside class="sidebar" aria-labelledby="todoHeading">
+        <h2 id="todoHeading">TO DO</h2>
+        <div class="summary" id="todoSummary" aria-live="polite"></div>
+        <div id="todoList"></div>
+      </aside>
+    </div>
+    <section class="yearbook-info" aria-labelledby="yearbookInfoHeading">
+      <h2 id="yearbookInfoHeading">YEARBOOK INFORMATION</h2>
+      <table class="info-table">
+        <thead>
+          <tr>
+            <th scope="col">CUSTOM PAGES DUE</th>
+            <th scope="col">FINISH EDITING</th>
+            <th scope="col">ESTIMATED DELIVERY</th>
+            <th scope="col">YEARBOOK COST</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Apr 26, 2027</td>
+            <td>May 10, 2027</td>
+            <td>Jun 1, 2027</td>
+            <td>$18.18</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </section>
+
+  <section id="assignmentsView" class="assignments">
+    <h2>ASSIGNMENTS</h2>
+    <div id="assignmentList"></div><div class="completed-wrap"><h2>COMPLETED WORK</h2><div id="completedList"></div></div>
+  </section>
+
+  <section id="adminView" class="admin-note" aria-label="Admin editor">
+    <div id="adminGate" class="admin-gate"><h2>Advisor access</h2><p>Sign in with an authorized PES advisor Google account to manage Yearbook Desk.</p><button id="adminSignInBtn" type="button" class="primary">Sign in with Google</button></div>
+    <div class="admin-grid" id="adminGrid" hidden>
+      <section class="admin-card">
+        <h2>Students</h2>
+        <form id="studentForm">
+          <div class="field">
+            <label for="studentName">Student name</label>
+            <input id="studentName" required autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="studentColor">Name color</label>
+            <input id="studentColor" type="color" value="#d6ebe7" aria-describedby="colorHelp">
+          </div>
+          <div class="help" id="colorHelp">Color supports recognition; the student's written name is always shown too.</div>
+          <button class="primary" type="submit">Add student</button>
+        </form>
+        <div class="roster-list" id="rosterList"></div>
+      </section>
+
+      <section class="admin-card">
+        <h2>Add event</h2>
+        <form id="eventForm">
+          <div class="field"><label for="eventTitle">Event name</label><input id="eventTitle" required></div>
+          <div class="field"><label for="eventDate">Date</label><input id="eventDate" type="date" required></div>
+          <div class="field"><label for="eventTime">Time <span style="font-weight:400">(optional)</span></label><input id="eventTime" type="time"></div>
+          <div class="field"><label for="eventLocation">Location <span style="font-weight:400">(optional)</span></label><input id="eventLocation"></div>
+          <div class="field"><label for="eventInstructions">Instructions <span style="font-weight:400">(optional)</span></label><textarea id="eventInstructions" placeholder="What should students photograph or remember?"></textarea></div>
+          <div class="field"><label for="eventRepeat">Repeat</label><select id="eventRepeat"><option value="none">Does not repeat</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option></select></div>
+          <div class="field" id="repeatCountField" style="display:none"><label for="repeatCount">Number of occurrences</label><input id="repeatCount" type="number" min="2" max="40" value="4"></div>
+          <div class="field"><label>Assign students</label><div class="checks" id="eventPeople"></div></div>
+          <button class="primary" type="submit">Add event</button>
+        </form>
+      </section>
+
+      <section class="admin-card">
+        <h2>Add task</h2>
+        <form id="taskForm">
+          <div class="field"><label for="taskTitle">Task</label><input id="taskTitle" required></div>
+          <div class="field"><label for="taskDue">Deadline</label><input id="taskDue" type="date" required></div>
+          <div class="field"><label>Assign students</label><div class="checks" id="taskPeople"></div></div>
+          <button class="primary" type="submit">Add task</button>
+        </form>
+      </section>
+
+      <section class="admin-card">
+        <h2>Coverage requests</h2>
+        <div class="help">Students who volunteer for unassigned events appear here for approval.</div>
+        <div id="coverageRequests"></div>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  onSnapshot, serverTimestamp, writeBatch
+} from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCZfj9KFGj2cMyEzXlmQ6KGLACmaLOqp_g",
+  authDomain: "pes-yearbook-desk.firebaseapp.com",
+  projectId: "pes-yearbook-desk",
+  storageBucket: "pes-yearbook-desk.firebasestorage.app",
+  messagingSenderId: "381909761473",
+  appId: "1:381909761473:web:f40f148e9b7a8dc59d8340"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({hd:"pemibaker.org"});
+
+const ADMIN_EMAILS = new Set(["gsambor@pemibaker.org","kalbiston@pemibaker.org"]);
+let currentUser = null;
+let isAdmin = false;
+
+let students = {};
+let studentIds = {};
+let events = [];
+let tasks = [];
+let requests = [];
+let view = localStorage.getItem("yearbookView") || "month";
+let filter = localStorage.getItem("yearbookFilter") || "Everyone";
+let anchor = new Date();
+
+const fmtMonth=new Intl.DateTimeFormat("en-US",{month:"long",year:"numeric"});
+const fmtShort=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"});
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function tag(name){
+  if(!name)return '<span class="tag unassigned">UNASSIGNED</span>';
+  const bg=students[name]?.bg || "#ffffff";
+  return `<span class="tag" style="background:${bg}">${esc(name).toUpperCase()}</span>`;
+}
+function visiblePeople(people=[]){
+  if(filter==="Everyone")return true;
+  if(filter==="Unassigned")return people.length===0;
+  return people.includes(filter);
+}
+function setupFilter(){
+  const s=document.querySelector("#studentFilter");
+  s.innerHTML=`<option>Everyone</option>${Object.keys(students).sort().map(n=>`<option>${esc(n)}</option>`).join("")}<option>Unassigned</option>`;
+  if(![...s.options].some(o=>o.value===filter))filter="Everyone";
+  s.value=filter;
+}
+function weekdaysOfWeek(d){
+  const x=new Date(d),day=x.getDay(),diff=(day===0?-6:1-day);x.setDate(x.getDate()+diff);
+  return Array.from({length:5},(_,i)=>{const q=new Date(x);q.setDate(x.getDate()+i);return q});
+}
+function monthWeekdays(d){
+  const first=new Date(d.getFullYear(),d.getMonth(),1),last=new Date(d.getFullYear(),d.getMonth()+1,0);
+  let start=new Date(first),sd=start.getDay();start.setDate(start.getDate()+(sd===0?-6:1-sd));
+  let end=new Date(last),ed=end.getDay();end.setDate(end.getDate()+(ed===0?-2:5-ed));
+  let arr=[];for(let q=new Date(start);q<=end;q.setDate(q.getDate()+1))if(q.getDay()>=1&&q.getDay()<=5)arr.push(new Date(q));
+  return arr;
+}
+function syncView(){
+  document.querySelector("#monthBtn").classList.toggle("active",view==="month");
+  document.querySelector("#weekBtn").classList.toggle("active",view==="week");
+}
+function renderCalendar(){
+  const days=view==="week"?weekdaysOfWeek(anchor):monthWeekdays(anchor);
+  document.querySelector("#period").textContent=view==="month"?fmtMonth.format(anchor):`${fmtShort.format(days[0])} – ${fmtShort.format(days[4])}, ${days[4].getFullYear()}`;
+  const grid=document.querySelector("#calendarGrid");grid.innerHTML="";
+  days.forEach(d=>{
+    const cell=document.createElement("div");
+    cell.className="day"+(view==="month"&&d.getMonth()!==anchor.getMonth()?" out":"");
+    cell.setAttribute("aria-label",d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}));
+    cell.innerHTML=`<div class="date">${d.getDate()}</div>`;
+    events.filter(e=>e.date===iso(d)&&visiblePeople(e.people||[])).forEach(e=>{
+      const article=document.createElement("article");
+      article.className="event"+(e.instructions?" has-info":"");
+      article.innerHTML=`<div class="event-title">${esc(e.title)}</div>
+        ${e.time?`<div class="event-meta">${esc(e.time)}</div>`:""}
+        ${e.location?`<div class="event-meta">${esc(e.location)}</div>`:""}
+        <div class="tags">${(e.people||[]).length?e.people.map(tag).join(""):tag(null)}</div>
+        ${e.instructions?`<button class="info-btn" type="button" aria-label="View instructions for ${esc(e.title)}" aria-expanded="false">i</button><div class="instructions-popover" hidden><strong>Instructions</strong>${esc(e.instructions)}</div>`:""}
+        ${(e.people||[]).length===0?`<button class="volunteer-btn" type="button">Volunteer</button><div class="volunteer-slot"></div>`:""}`;
+      const info=article.querySelector(".info-btn");
+      if(info) info.onclick=(ev)=>{
+        ev.stopPropagation();
+        document.querySelectorAll(".instructions-popover").forEach(p=>{if(p!==info.nextElementSibling)p.hidden=true});
+        const panel=info.nextElementSibling; panel.hidden=!panel.hidden;
+        info.setAttribute("aria-expanded",String(!panel.hidden));
+      };
+      const volunteer=article.querySelector(".volunteer-btn");
+      if(volunteer) volunteer.onclick=()=>{
+        const slot=article.querySelector(".volunteer-slot");
+        const opts=Object.entries(studentIds).sort((a,b)=>a[0].localeCompare(b[0])).map(([n,id])=>`<option value="${esc(id)}" data-name="${esc(n)}">${esc(n)}</option>`).join("");
+        slot.innerHTML=`<div class="volunteer-panel"><label>Select your name</label><select class="volunteer-name"><option value="">Choose your name</option>${opts}</select><button type="button" class="submit-volunteer">Submit request</button><div class="status-msg" aria-live="polite"></div></div>`;
+        volunteer.hidden=true;
+        slot.querySelector(".submit-volunteer").onclick=async()=>{
+          const select=slot.querySelector(".volunteer-name");
+          const studentId=select.value;
+          const studentName=select.options[select.selectedIndex]?.dataset.name || "";
+          const status=slot.querySelector(".status-msg");
+          if(!studentId){status.textContent="Select your name first.";return;}
+          try{
+            await addDoc(collection(db,"requests"),{
+              eventId:e.id, studentId, studentName, status:"pending", createdAt:serverTimestamp()
+            });
+            slot.innerHTML=`<div class="status-msg">Request submitted for ${esc(studentName)}.</div>`;
+          }catch(err){console.error(err);status.textContent="The request could not be submitted. Try again.";}
+        };
+      };
+      cell.appendChild(article);
+    });
+    grid.appendChild(cell);
+  });
+  renderTodos();
+}
+function deadlineText(t){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const diff=Math.round((new Date(t.due+"T00:00:00")-today)/86400000);
+  if(diff<0)return `<span class="deadline-urgent">OVERDUE — ${fmtShort.format(new Date(t.due+"T12:00:00"))}</span>`;
+  if(diff===0)return `<span class="deadline-urgent">DUE TODAY</span>`;
+  if(diff===1)return `<span class="deadline-urgent">DUE TOMORROW</span>`;
+  return `Due ${fmtShort.format(new Date(t.due+"T12:00:00"))}`;
+}
+function renderTodos(){
+  const list=document.querySelector("#todoList");
+  const visible=tasks.filter(t=>!t.done&&visiblePeople(t.people||[])).sort((a,b)=>a.due.localeCompare(b.due));
+  document.querySelector("#todoSummary").textContent=`${visible.length} open task${visible.length===1?"":"s"}`;
+  list.innerHTML=visible.length?visible.map(t=>`<div class="todo"><div class="todo-title">${esc(t.title)}</div><div class="due">${deadlineText(t)}</div><div class="tags">${(t.people||[]).length?t.people.map(tag).join(""):tag(null)}</div>${isAdmin?`<div class="todo-actions"><button type="button" class="complete-btn" data-id="${t.id}">Mark complete</button></div>`:""}</div>`).join(""):'<div class="empty">No open tasks.</div>';
+  list.querySelectorAll(".complete-btn").forEach(btn=>btn.onclick=async()=>{
+    await updateDoc(doc(db,"tasks",btn.dataset.id),{done:true,completedOn:iso(new Date())});
+  });
+}
+function renderAssignments(){
+  const box=document.querySelector("#assignmentList");
+  const names=filter==="Everyone"?Object.keys(students).sort():filter==="Unassigned"?["Unassigned"]:[filter];
+  box.innerHTML=names.map(name=>{
+    const ev=events.filter(e=>name==="Unassigned"?(e.people||[]).length===0:(e.people||[]).includes(name));
+    const ts=tasks.filter(t=>!t.done&&(name==="Unassigned"?(t.people||[]).length===0:(t.people||[]).includes(name)));
+    return `<div class="person"><div>${name==="Unassigned"?tag(null):tag(name)}</div><div>
+      ${ev.map(e=>`<div class="item"><strong>${fmtShort.format(new Date(e.date+"T12:00:00"))}</strong> — ${esc(e.title)}${e.time?` · ${esc(e.time)}`:""}${e.location?` · ${esc(e.location)}`:""}</div>`).join("")}
+      ${ts.map(t=>`<div class="item"><strong>Due ${fmtShort.format(new Date(t.due+"T12:00:00"))}</strong> — ${esc(t.title)}</div>`).join("")}
+      ${!ev.length&&!ts.length?'<div class="item">No assignments.</div>':""}</div></div>`;
+  }).join("");
+  const done=tasks.filter(t=>t.done&&visiblePeople(t.people||[])).sort((a,b)=>(b.completedOn||"").localeCompare(a.completedOn||""));
+  const completed=document.querySelector("#completedList");
+  completed.innerHTML=done.length?done.map(t=>`<div class="completed-item"><strong>${esc(t.title)}</strong> · ${(t.people||[]).length?t.people.map(tag).join(" "):tag(null)}${t.completedOn?` · Completed ${fmtShort.format(new Date(t.completedOn+"T12:00:00"))}`:""} ${isAdmin?`<button type="button" class="small-btn reopen-task" data-id="${t.id}">Reopen</button>`:""}</div>`).join(""):'<div class="empty">No completed work yet.</div>';
+  completed.querySelectorAll(".reopen-task").forEach(btn=>btn.onclick=async()=>{
+    await updateDoc(doc(db,"tasks",btn.dataset.id),{done:false,completedOn:null});
+  });
+}
+function peopleChecks(containerId,prefix){
+  const box=document.querySelector("#"+containerId);
+  box.innerHTML=Object.keys(students).sort().map(n=>`<label class="check-option"><input type="checkbox" name="${prefix}" value="${esc(n)}"> ${esc(n)}</label>`).join("");
+}
+function selectedPeople(form,name){return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value)}
+function renderAdmin(){
+  const gate=document.querySelector("#adminGate"), grid=document.querySelector("#adminGrid");
+  gate.hidden=isAdmin; grid.hidden=!isAdmin;
+  if(!isAdmin)return;
+  const roster=document.querySelector("#rosterList");
+  roster.innerHTML=Object.keys(students).sort().map(n=>`<div class="roster-row"><span>${tag(n)}</span><button type="button" class="small-btn remove-student" data-id="${studentIds[n]}" data-name="${esc(n)}">Remove</button></div>`).join("");
+  roster.querySelectorAll(".remove-student").forEach(b=>b.onclick=async()=>{
+    const name=b.dataset.name;
+    if(!confirm(`Remove ${name} from the roster? Existing assignments will become unassigned where needed.`))return;
+    const batch=writeBatch(db);
+    batch.delete(doc(db,"students",b.dataset.id));
+    events.filter(e=>(e.people||[]).includes(name)).forEach(e=>batch.update(doc(db,"events",e.id),{people:e.people.filter(p=>p!==name)}));
+    tasks.filter(t=>(t.people||[]).includes(name)).forEach(t=>batch.update(doc(db,"tasks",t.id),{people:t.people.filter(p=>p!==name)}));
+    await batch.commit();
+  });
+  peopleChecks("eventPeople","eventPeople"); peopleChecks("taskPeople","taskPeople");
+  const reqBox=document.querySelector("#coverageRequests");
+  const pending=requests.filter(r=>r.status==="pending");
+  reqBox.innerHTML=pending.length?pending.map(r=>{
+    const ev=events.find(e=>e.id===r.eventId);
+    return `<div class="request-card" data-id="${r.id}"><div class="request-title">${esc(r.studentName)} volunteered</div><div class="request-meta">${esc(ev?.title||"Event")}${ev?.date?` · ${fmtShort.format(new Date(ev.date+"T12:00:00"))}`:""}</div><div class="request-actions"><button type="button" class="small-btn approve">Approve</button><button type="button" class="small-btn decline">Decline</button></div></div>`;
+  }).join(""):'<div class="empty">No pending coverage requests.</div>';
+  reqBox.querySelectorAll(".request-card").forEach(card=>{
+    const r=requests.find(x=>x.id===card.dataset.id);
+    card.querySelector(".approve").onclick=async()=>{
+      const ev=events.find(e=>e.id===r.eventId);
+      if(!ev)return;
+      const people=[...new Set([...(ev.people||[]),r.studentName])];
+      const batch=writeBatch(db);
+      batch.update(doc(db,"events",ev.id),{people});
+      batch.update(doc(db,"requests",r.id),{status:"approved"});
+      await batch.commit();
+    };
+    card.querySelector(".decline").onclick=()=>updateDoc(doc(db,"requests",r.id),{status:"declined"});
+  });
+}
+function renderAll(){
+  setupFilter(); syncView(); renderCalendar(); renderAssignments(); renderAdmin();
+}
+function setTab(name){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  document.querySelector("#calendarView").style.display=name==="calendar"?"block":"none";
+  document.querySelector("#assignmentsView").style.display=name==="assignments"?"block":"none";
+  document.querySelector("#adminView").style.display=name==="admin"?"block":"none";
+  if(name==="assignments")renderAssignments();
+  if(name==="admin")renderAdmin();
+}
+
+document.addEventListener("click",()=>{
+  document.querySelectorAll(".instructions-popover").forEach(p=>p.hidden=true);
+  document.querySelectorAll(".info-btn").forEach(b=>b.setAttribute("aria-expanded","false"));
+});
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+document.querySelector("#studentFilter").onchange=e=>{filter=e.target.value;localStorage.setItem("yearbookFilter",filter);renderCalendar();renderAssignments()};
+document.querySelector("#monthBtn").onclick=()=>{view="month";localStorage.setItem("yearbookView",view);syncView();renderCalendar()};
+document.querySelector("#weekBtn").onclick=()=>{view="week";localStorage.setItem("yearbookView",view);syncView();renderCalendar()};
+document.querySelector("#prev").onclick=()=>{if(view==="month")anchor=new Date(anchor.getFullYear(),anchor.getMonth()-1,1);else anchor.setDate(anchor.getDate()-7);renderCalendar()};
+document.querySelector("#next").onclick=()=>{if(view==="month")anchor=new Date(anchor.getFullYear(),anchor.getMonth()+1,1);else anchor.setDate(anchor.getDate()+7);renderCalendar()};
+document.querySelector("#printBtn").onclick=()=>{const menu=document.querySelector("#printOptions");menu.classList.toggle("open");document.querySelector("#printBtn").setAttribute("aria-expanded",menu.classList.contains("open"))};
+document.querySelectorAll("#printOptions button").forEach(btn=>btn.onclick=()=>{
+  document.querySelector("#printOptions").classList.remove("open");
+  const kind=btn.dataset.print;
+  if(kind==="week"){view="week";syncView();renderCalendar();setTab("calendar")}
+  if(kind==="month"){view="month";syncView();renderCalendar();setTab("calendar")}
+  if(kind==="assignments"){setTab("assignments")}
+  if(kind==="team"){filter="Everyone";setupFilter();renderCalendar();renderAssignments()}
+  setTimeout(()=>window.print(),50);
+});
+
+async function advisorSignIn(){
+  try{await signInWithPopup(auth,provider)}
+  catch(err){console.error(err);alert("Google sign-in did not complete. Please try again.")}
+}
+document.querySelector("#signInBtn").onclick=advisorSignIn;
+document.querySelector("#adminSignInBtn").onclick=advisorSignIn;
+document.querySelector("#signOutBtn").onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth,user=>{
+  currentUser=user;
+  isAdmin=!!user && ADMIN_EMAILS.has((user.email||"").toLowerCase());
+  document.querySelector("#signInBtn").hidden=!!user;
+  document.querySelector("#signOutBtn").hidden=!user;
+  document.querySelector("#authStatus").textContent=user?(isAdmin?`Advisor: ${user.email}`:`Signed in: ${user.email} (not an advisor)`):"";
+  renderAll();
+});
+
+document.querySelector("#studentForm").addEventListener("submit",async e=>{
+  e.preventDefault(); if(!isAdmin)return;
+  const name=document.querySelector("#studentName").value.trim(); if(!name)return;
+  await addDoc(collection(db,"students"),{name,bg:document.querySelector("#studentColor").value});
+  e.currentTarget.reset(); document.querySelector("#studentColor").value="#d6ebe7";
+});
+document.querySelector("#eventRepeat").addEventListener("change",e=>{document.querySelector("#repeatCountField").style.display=e.target.value==="none"?"none":"block"});
+document.querySelector("#eventForm").addEventListener("submit",async e=>{
+  e.preventDefault(); if(!isAdmin)return;
+  const f=e.currentTarget, timeValue=document.querySelector("#eventTime").value;
+  let time="";
+  if(timeValue){const [h,m]=timeValue.split(":").map(Number);time=new Date(2000,0,1,h,m).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}
+  const baseDate=document.querySelector("#eventDate").value, repeat=document.querySelector("#eventRepeat").value;
+  const count=repeat==="none"?1:Math.max(2,Math.min(40,Number(document.querySelector("#repeatCount").value)||4));
+  const step=repeat==="biweekly"?14:7, batch=writeBatch(db);
+  for(let i=0;i<count;i++){
+    const d=new Date(baseDate+"T12:00:00"); if(i)d.setDate(d.getDate()+step*i);
+    const ref=doc(collection(db,"events"));
+    batch.set(ref,{date:iso(d),title:document.querySelector("#eventTitle").value.trim(),time,location:document.querySelector("#eventLocation").value.trim(),instructions:document.querySelector("#eventInstructions").value.trim(),people:selectedPeople(f,"eventPeople")});
+  }
+  await batch.commit(); f.reset(); document.querySelector("#repeatCountField").style.display="none";
+});
+document.querySelector("#taskForm").addEventListener("submit",async e=>{
+  e.preventDefault(); if(!isAdmin)return;
+  const f=e.currentTarget;
+  await addDoc(collection(db,"tasks"),{title:document.querySelector("#taskTitle").value.trim(),due:document.querySelector("#taskDue").value,people:selectedPeople(f,"taskPeople"),done:false,completedOn:null});
+  f.reset();
+});
+
+// Live Firestore listeners.
+onSnapshot(collection(db,"students"),snap=>{
+  students={}; studentIds={};
+  snap.forEach(d=>{const x=d.data(); if(x.name){students[x.name]={bg:x.bg||"#ffffff"};studentIds[x.name]=d.id}});
+  renderAll();
+},err=>console.error("Students:",err));
+
+onSnapshot(collection(db,"events"),snap=>{
+  events=snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderAll();
+},err=>console.error("Events:",err));
+
+onSnapshot(collection(db,"tasks"),snap=>{
+  tasks=snap.docs.map(d=>({id:d.id,...d.data()}));
+  renderAll();
+},err=>console.error("Tasks:",err));
+
+// Requests are admin-only reads. Attach/detach this listener based on auth.
+let unsubscribeRequests=null;
+onAuthStateChanged(auth,user=>{
+  if(unsubscribeRequests){unsubscribeRequests();unsubscribeRequests=null}
+  requests=[];
+  if(user && ADMIN_EMAILS.has((user.email||"").toLowerCase())){
+    unsubscribeRequests=onSnapshot(collection(db,"requests"),snap=>{
+      requests=snap.docs.map(d=>({id:d.id,...d.data()})); renderAdmin();
+    },err=>console.error("Requests:",err));
+  }else renderAdmin();
+});
+
+renderAll();
+
+</script>
+</body>
+</html>
