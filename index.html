@@ -123,7 +123,7 @@ main{padding:22px 30px 36px}
 .info-btn{position:absolute;top:8px;right:8px;width:30px;height:30px;min-height:30px;padding:0;border:2px solid var(--ink);border-radius:50%;background:#fff;color:var(--ink);font-family:Georgia,serif;font-size:.9rem;font-weight:700;font-style:italic;line-height:26px;text-align:center}
 .info-btn:hover{background:var(--soft)}
 .info-btn:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
-.instructions-popover{position:absolute;top:43px;right:8px;z-index:15;width:min(300px,calc(100vw - 60px));padding:13px 14px;border:2px solid var(--ink);border-radius:9px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:.82rem;line-height:1.45}
+.instructions-popover{position:fixed;z-index:1000;width:min(340px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;overflow-wrap:anywhere;white-space:pre-wrap;padding:13px 14px;border:2px solid var(--ink);border-radius:9px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:.82rem;line-height:1.45}
 .instructions-popover strong{display:block;margin-bottom:5px;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
 .deadline-urgent{font-weight:900;color:#8a1c1c}
 .todo-actions{margin-top:8px}
@@ -409,7 +409,22 @@ function renderCalendar(){
       if(info) info.onclick=(ev)=>{
         ev.stopPropagation();
         document.querySelectorAll(".instructions-popover").forEach(p=>{if(p!==info.nextElementSibling)p.hidden=true});
+        document.querySelectorAll(".info-btn").forEach(b=>{if(b!==info)b.setAttribute("aria-expanded","false")});
         const panel=info.nextElementSibling; panel.hidden=!panel.hidden;
+        if(!panel.hidden){
+          const buttonRect=info.getBoundingClientRect();
+          // Fixed positioning keeps the panel outside the clipped calendar columns.
+          const margin=12, spacing=8;
+          const panelWidth=panel.getBoundingClientRect().width;
+          const panelHeight=panel.getBoundingClientRect().height;
+          const left=Math.max(margin,Math.min(buttonRect.right-panelWidth,window.innerWidth-panelWidth-margin));
+          const below=buttonRect.bottom+spacing;
+          const above=buttonRect.top-panelHeight-spacing;
+          const top=below+panelHeight<=window.innerHeight-margin?below:
+            above>=margin?above:Math.max(margin,Math.min(below,window.innerHeight-panelHeight-margin));
+          panel.style.left=`${left}px`;
+          panel.style.top=`${top}px`;
+        }
         info.setAttribute("aria-expanded",String(!panel.hidden));
       };
       const volunteer=article.querySelector(".volunteer-btn");
