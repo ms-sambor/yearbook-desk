@@ -92,6 +92,8 @@ main{padding:22px 30px 36px}
 .primary{background:var(--accent);color:#fff;border-color:var(--accent);width:100%}
 .roster-list{margin-top:14px;border-top:1px solid var(--line)}
 .manage-card{grid-column:1/-1}
+.coverage-card{grid-column:1/-1}
+.past-events-toggle{margin-top:12px;font-size:.82rem}
 .manage-events{margin-top:12px}
 .manage-event{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line);padding:12px 0}
 .manage-event-info{min-width:0;overflow-wrap:anywhere}
@@ -249,6 +251,11 @@ main{padding:22px 30px 36px}
   <section id="adminView" class="admin-note" aria-label="Admin editor">
     <div id="adminGate" class="admin-gate"><h2>Advisor access</h2><p>Sign in with an authorized PES advisor Google account to manage Yearbook Desk.</p><button id="adminSignInBtn" type="button" class="primary">Sign in with Google</button></div>
     <div class="admin-grid" id="adminGrid" hidden>
+      <section class="admin-card coverage-card">
+        <h2>Coverage requests</h2>
+        <div class="help">Pending requests for upcoming events appear here for approval.</div>
+        <div id="coverageRequests"></div>
+      </section>
       <section class="admin-card">
         <h2>Students</h2>
         <form id="studentForm">
@@ -293,15 +300,12 @@ main{padding:22px 30px 36px}
 
       <section class="admin-card manage-card">
         <h2>Manage events</h2>
-        <p class="help">Edit, unpublish, or delete an event. Unpublished events are hidden from students but remain here for advisors. Repeating events can be managed individually.</p>
+        <p class="help">Upcoming events appear below, including unpublished events. Past events are hidden from this list, not deleted. Repeating events can be managed individually.</p>
+        <button id="pastEventsToggle" class="past-events-toggle" type="button" aria-pressed="false">Show past events</button>
         <div id="manageEvents" class="manage-events" aria-live="polite"></div>
       </section>
 
-      <section class="admin-card">
-        <h2>Coverage requests</h2>
-        <div class="help">Students who volunteer for unassigned events appear here for approval.</div>
-        <div id="coverageRequests"></div>
-      </section>
+
     </div>
   </section>
 </main>
@@ -340,6 +344,7 @@ let students = {};
 let studentIds = {};
 let events = [];
 let editingEventId = null;
+let showPastEvents = false;
 let tasks = [];
 let requests = [];
 let view = localStorage.getItem("yearbookView") || "month";
@@ -496,7 +501,8 @@ function renderAdmin(){
   peopleChecks("eventPeople","eventPeople"); peopleChecks("taskPeople","taskPeople");
   renderManageEvents();
   const reqBox=document.querySelector("#coverageRequests");
-  const pending=requests.filter(r=>r.status==="pending" && events.some(e=>e.id===r.eventId && e.published!==false));
+  const today=iso(new Date());
+  const pending=requests.filter(r=>r.status==="pending" && events.some(e=>e.id===r.eventId && e.published!==false && e.date>=today));
   reqBox.innerHTML=pending.length?pending.map(r=>{
     const ev=events.find(e=>e.id===r.eventId);
     return `<div class="request-card" data-id="${r.id}"><div class="request-title">${esc(r.studentName)} volunteered</div><div class="request-meta">${esc(ev?.title||"Event")}${ev?.date?` · ${fmtShort.format(new Date(ev.date+"T12:00:00"))}`:""}</div><div class="request-actions"><button type="button" class="small-btn approve">Approve</button><button type="button" class="small-btn decline">Decline</button></div></div>`;
@@ -555,11 +561,16 @@ function editEvent(id){
 function renderManageEvents(){
   if(!isAdmin)return;
   const box=document.querySelector("#manageEvents");
-  const sorted=[...events].sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.title||"").localeCompare(b.title||""));
+  const today=iso(new Date());
+  const sorted=events.filter(e=>showPastEvents || !e.date || e.date>=today)
+    .sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.title||"").localeCompare(b.title||""));
+  const toggle=document.querySelector("#pastEventsToggle");
+  toggle.textContent=showPastEvents?"Hide past events":"Show past events";
+  toggle.setAttribute("aria-pressed",String(showPastEvents));
   box.innerHTML=sorted.length?sorted.map(e=>`<div class="manage-event" data-id="${esc(e.id)}">
     <div class="manage-event-info"><div class="manage-event-title">${esc(e.title||"Untitled")}${e.published===false?'<span class="unpublished-label">UNPUBLISHED</span>':""}</div>
     <div class="manage-event-meta">${esc(e.date||"No date")}${e.time?` · ${esc(e.time)}`:""}${e.location?` · ${esc(e.location)}`:""}</div></div>
-    <div class="manage-event-actions"><button type="button" class="small-btn edit-event">Edit</button><button type="button" class="small-btn toggle-event">${e.published===false?"Publish":"Unpublish"}</button><button type="button" class="small-btn danger-btn delete-event">Delete</button></div></div>`).join(""):'<div class="empty">No events yet.</div>';
+    <div class="manage-event-actions"><button type="button" class="small-btn edit-event">Edit</button><button type="button" class="small-btn toggle-event">${e.published===false?"Publish":"Unpublish"}</button><button type="button" class="small-btn danger-btn delete-event">Delete</button></div></div>`).join(""):'<div class="empty">No upcoming events.</div>';
   box.querySelectorAll(".manage-event").forEach(row=>{
     const id=row.dataset.id;
     const e=events.find(x=>x.id===id);
@@ -579,6 +590,10 @@ function renderManageEvents(){
     };
   });
 }
+document.querySelector("#pastEventsToggle").addEventListener("click",()=>{
+  showPastEvents=!showPastEvents;
+  renderManageEvents();
+});
 function renderAll(){
   setupFilter(); syncView(); renderCalendar(); renderAssignments(); renderAdmin();
 }
