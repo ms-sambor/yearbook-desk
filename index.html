@@ -91,6 +91,18 @@ main{padding:22px 30px 36px}
 .check-option input{width:18px;height:18px}
 .primary{background:var(--accent);color:#fff;border-color:var(--accent);width:100%}
 .roster-list{margin-top:14px;border-top:1px solid var(--line)}
+.manage-card{grid-column:1/-1}
+.manage-events{margin-top:12px}
+.manage-event{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--line);padding:12px 0}
+.manage-event-info{min-width:0;overflow-wrap:anywhere}
+.manage-event-actions{display:flex;gap:7px;flex-wrap:wrap;flex-shrink:0}
+.manage-event-title{font-weight:800}
+.manage-event-meta{font-size:.8rem;color:var(--muted)}
+.unpublished-label{display:inline-block;margin-left:7px;font-size:.7rem;font-weight:800;border:1px solid var(--ink);padding:1px 6px;border-radius:5px}
+.danger-btn{border-color:#a52a2a;color:#8a1c1c}
+.form-actions{display:flex;gap:8px;align-items:center}
+.form-actions .primary{flex:1}
+@media(max-width:700px){.manage-event{display:block}.manage-event-actions{margin-top:10px}}
 .roster-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .small-btn{min-height:36px;padding:5px 9px;font-size:.75rem}
 .help{font-size:.76rem;color:var(--muted);margin-top:-5px;margin-bottom:12px}
@@ -255,7 +267,7 @@ main{padding:22px 30px 36px}
       </section>
 
       <section class="admin-card">
-        <h2>Add event</h2>
+        <h2 id="eventFormHeading">Add event</h2>
         <form id="eventForm">
           <div class="field"><label for="eventTitle">Event name</label><input id="eventTitle" required></div>
           <div class="field"><label for="eventDate">Date</label><input id="eventDate" type="date" required></div>
@@ -265,7 +277,7 @@ main{padding:22px 30px 36px}
           <div class="field"><label for="eventRepeat">Repeat</label><select id="eventRepeat"><option value="none">Does not repeat</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option></select></div>
           <div class="field" id="repeatCountField" style="display:none"><label for="repeatCount">Number of occurrences</label><input id="repeatCount" type="number" min="2" max="40" value="4"></div>
           <div class="field"><label>Assign students</label><div class="checks" id="eventPeople"></div></div>
-          <button class="primary" type="submit">Add event</button>
+          <div class="form-actions"><button id="eventSaveBtn" class="primary" type="submit">Add event</button><button id="eventCancelBtn" type="button" hidden>Cancel edit</button></div>
         </form>
       </section>
 
@@ -277,6 +289,12 @@ main{padding:22px 30px 36px}
           <div class="field"><label>Assign students</label><div class="checks" id="taskPeople"></div></div>
           <button class="primary" type="submit">Add task</button>
         </form>
+      </section>
+
+      <section class="admin-card manage-card">
+        <h2>Manage events</h2>
+        <p class="help">Edit, unpublish, or delete an event. Unpublished events are hidden from students but remain here for advisors. Repeating events can be managed individually.</p>
+        <div id="manageEvents" class="manage-events" aria-live="polite"></div>
       </section>
 
       <section class="admin-card">
@@ -321,6 +339,7 @@ let isAdmin = false;
 let students = {};
 let studentIds = {};
 let events = [];
+let editingEventId = null;
 let tasks = [];
 let requests = [];
 let view = localStorage.getItem("yearbookView") || "month";
@@ -336,6 +355,7 @@ function tag(name){
   const bg=students[name]?.bg || "#ffffff";
   return `<span class="tag" style="background:${bg}">${esc(name).toUpperCase()}</span>`;
 }
+function publishedEvents(){return events.filter(e=>e.published!==false)}
 function visiblePeople(people=[]){
   if(filter==="Everyone")return true;
   if(filter==="Unassigned")return people.length===0;
@@ -371,7 +391,7 @@ function renderCalendar(){
     cell.className="day"+(view==="month"&&d.getMonth()!==anchor.getMonth()?" out":"");
     cell.setAttribute("aria-label",d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}));
     cell.innerHTML=`<div class="date">${d.getDate()}</div>`;
-    events.filter(e=>e.date===iso(d)&&visiblePeople(e.people||[])).forEach(e=>{
+    publishedEvents().filter(e=>e.date===iso(d)&&visiblePeople(e.people||[])).forEach(e=>{
       const article=document.createElement("article");
       article.className="event"+(e.instructions?" has-info":"");
       article.innerHTML=`<div class="event-title">${esc(e.title)}</div>
@@ -434,7 +454,7 @@ function renderAssignments(){
   const box=document.querySelector("#assignmentList");
   const names=filter==="Everyone"?Object.keys(students).sort():filter==="Unassigned"?["Unassigned"]:[filter];
   box.innerHTML=names.map(name=>{
-    const ev=events.filter(e=>name==="Unassigned"?(e.people||[]).length===0:(e.people||[]).includes(name));
+    const ev=publishedEvents().filter(e=>name==="Unassigned"?(e.people||[]).length===0:(e.people||[]).includes(name));
     const ts=tasks.filter(t=>!t.done&&(name==="Unassigned"?(t.people||[]).length===0:(t.people||[]).includes(name)));
     return `<div class="person"><div>${name==="Unassigned"?tag(null):tag(name)}</div><div>
       ${ev.map(e=>`<div class="item"><strong>${fmtShort.format(new Date(e.date+"T12:00:00"))}</strong> — ${esc(e.title)}${e.time?` · ${esc(e.time)}`:""}${e.location?` · ${esc(e.location)}`:""}</div>`).join("")}
@@ -450,7 +470,12 @@ function renderAssignments(){
 }
 function peopleChecks(containerId,prefix){
   const box=document.querySelector("#"+containerId);
-  box.innerHTML=Object.keys(students).sort().map(n=>`<label class="check-option"><input type="checkbox" name="${prefix}" value="${esc(n)}"> ${esc(n)}</label>`).join("");
+  const names=Object.keys(students).sort();
+  const key=JSON.stringify(names);
+  if(box.dataset.rosterKey===key)return;
+  const checked=new Set([...box.querySelectorAll('input:checked')].map(x=>x.value));
+  box.innerHTML=names.map(n=>`<label class="check-option"><input type="checkbox" name="${prefix}" value="${esc(n)}" ${checked.has(n)?"checked":""}> ${esc(n)}</label>`).join("");
+  box.dataset.rosterKey=key;
 }
 function selectedPeople(form,name){return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map(x=>x.value)}
 function renderAdmin(){
@@ -469,8 +494,9 @@ function renderAdmin(){
     await batch.commit();
   });
   peopleChecks("eventPeople","eventPeople"); peopleChecks("taskPeople","taskPeople");
+  renderManageEvents();
   const reqBox=document.querySelector("#coverageRequests");
-  const pending=requests.filter(r=>r.status==="pending");
+  const pending=requests.filter(r=>r.status==="pending" && events.some(e=>e.id===r.eventId && e.published!==false));
   reqBox.innerHTML=pending.length?pending.map(r=>{
     const ev=events.find(e=>e.id===r.eventId);
     return `<div class="request-card" data-id="${r.id}"><div class="request-title">${esc(r.studentName)} volunteered</div><div class="request-meta">${esc(ev?.title||"Event")}${ev?.date?` · ${fmtShort.format(new Date(ev.date+"T12:00:00"))}`:""}</div><div class="request-actions"><button type="button" class="small-btn approve">Approve</button><button type="button" class="small-btn decline">Decline</button></div></div>`;
@@ -487,6 +513,70 @@ function renderAdmin(){
       await batch.commit();
     };
     card.querySelector(".decline").onclick=()=>updateDoc(doc(db,"requests",r.id),{status:"declined"});
+  });
+}
+function parseEventTime(time){
+  if(!time)return "";
+  const d=new Date(`2000-01-01 ${time}`);
+  if(Number.isNaN(d.getTime()))return /^\d{2}:\d{2}$/.test(time)?time:"";
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function resetEventEditor(){
+  editingEventId=null;
+  const form=document.querySelector("#eventForm");
+  form.reset();
+  document.querySelector("#eventFormHeading").textContent="Add event";
+  document.querySelector("#eventSaveBtn").textContent="Add event";
+  document.querySelector("#eventCancelBtn").hidden=true;
+  document.querySelector("#eventRepeat").disabled=false;
+  document.querySelector("#eventRepeat").closest(".field").hidden=false;
+  document.querySelector("#repeatCountField").style.display="none";
+}
+function editEvent(id){
+  if(!isAdmin)return;
+  const event=events.find(e=>e.id===id);
+  if(!event)return;
+  editingEventId=id;
+  const f=document.querySelector("#eventForm");
+  f.querySelector("#eventTitle").value=event.title||"";
+  f.querySelector("#eventDate").value=event.date||"";
+  f.querySelector("#eventTime").value=parseEventTime(event.time||"");
+  f.querySelector("#eventLocation").value=event.location||"";
+  f.querySelector("#eventInstructions").value=event.instructions||"";
+  f.querySelectorAll('input[name="eventPeople"]').forEach(el=>el.checked=(event.people||[]).includes(el.value));
+  document.querySelector("#eventFormHeading").textContent="Edit event";
+  document.querySelector("#eventSaveBtn").textContent="Save changes";
+  document.querySelector("#eventCancelBtn").hidden=false;
+  document.querySelector("#eventRepeat").closest(".field").hidden=true;
+  document.querySelector("#repeatCountField").style.display="none";
+  f.scrollIntoView({behavior:"smooth",block:"start"});
+  f.querySelector("#eventTitle").focus({preventScroll:true});
+}
+function renderManageEvents(){
+  if(!isAdmin)return;
+  const box=document.querySelector("#manageEvents");
+  const sorted=[...events].sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.title||"").localeCompare(b.title||""));
+  box.innerHTML=sorted.length?sorted.map(e=>`<div class="manage-event" data-id="${esc(e.id)}">
+    <div class="manage-event-info"><div class="manage-event-title">${esc(e.title||"Untitled")}${e.published===false?'<span class="unpublished-label">UNPUBLISHED</span>':""}</div>
+    <div class="manage-event-meta">${esc(e.date||"No date")}${e.time?` · ${esc(e.time)}`:""}${e.location?` · ${esc(e.location)}`:""}</div></div>
+    <div class="manage-event-actions"><button type="button" class="small-btn edit-event">Edit</button><button type="button" class="small-btn toggle-event">${e.published===false?"Publish":"Unpublish"}</button><button type="button" class="small-btn danger-btn delete-event">Delete</button></div></div>`).join(""):'<div class="empty">No events yet.</div>';
+  box.querySelectorAll(".manage-event").forEach(row=>{
+    const id=row.dataset.id;
+    const e=events.find(x=>x.id===id);
+    row.querySelector(".edit-event").onclick=()=>editEvent(id);
+    row.querySelector(".toggle-event").onclick=async()=>{
+      if(!isAdmin)return;
+      try{await updateDoc(doc(db,"events",id),{published:e.published===false});}
+      catch(err){console.error(err);alert("Could not change the event's visibility. Check your access and try again.");}
+    };
+    row.querySelector(".delete-event").onclick=async()=>{
+      if(!isAdmin)return;
+      if(!confirm(`Permanently delete "${e.title}" on ${e.date}? This cannot be undone.`))return;
+      try{
+        await deleteDoc(doc(db,"events",id));
+        if(editingEventId===id)resetEventEditor();
+      }catch(err){console.error(err);alert("Could not delete the event. Check your access and try again.");}
+    };
   });
 }
 function renderAll(){
@@ -546,20 +636,30 @@ document.querySelector("#studentForm").addEventListener("submit",async e=>{
   e.currentTarget.reset(); document.querySelector("#studentColor").value="#d6ebe7";
 });
 document.querySelector("#eventRepeat").addEventListener("change",e=>{document.querySelector("#repeatCountField").style.display=e.target.value==="none"?"none":"block"});
+document.querySelector("#eventCancelBtn").onclick=resetEventEditor;
 document.querySelector("#eventForm").addEventListener("submit",async e=>{
   e.preventDefault(); if(!isAdmin)return;
   const f=e.currentTarget, timeValue=document.querySelector("#eventTime").value;
   let time="";
   if(timeValue){const [h,m]=timeValue.split(":").map(Number);time=new Date(2000,0,1,h,m).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}
-  const baseDate=document.querySelector("#eventDate").value, repeat=document.querySelector("#eventRepeat").value;
+  const details={date:document.querySelector("#eventDate").value,title:document.querySelector("#eventTitle").value.trim(),time,location:document.querySelector("#eventLocation").value.trim(),instructions:document.querySelector("#eventInstructions").value.trim(),people:selectedPeople(f,"eventPeople")};
+  if(!details.title)return;
+  if(editingEventId){
+    const id=editingEventId;
+    try{await updateDoc(doc(db,"events",id),details);resetEventEditor();}
+    catch(err){console.error(err);alert("Could not save event changes. Check your access and try again.");}
+    return;
+  }
+  const baseDate=details.date, repeat=document.querySelector("#eventRepeat").value;
   const count=repeat==="none"?1:Math.max(2,Math.min(40,Number(document.querySelector("#repeatCount").value)||4));
   const step=repeat==="biweekly"?14:7, batch=writeBatch(db);
   for(let i=0;i<count;i++){
     const d=new Date(baseDate+"T12:00:00"); if(i)d.setDate(d.getDate()+step*i);
     const ref=doc(collection(db,"events"));
-    batch.set(ref,{date:iso(d),title:document.querySelector("#eventTitle").value.trim(),time,location:document.querySelector("#eventLocation").value.trim(),instructions:document.querySelector("#eventInstructions").value.trim(),people:selectedPeople(f,"eventPeople")});
+    batch.set(ref,{...details,date:iso(d),published:true});
   }
-  await batch.commit(); f.reset(); document.querySelector("#repeatCountField").style.display="none";
+  try{await batch.commit();resetEventEditor();}
+  catch(err){console.error(err);alert("Could not add the event. Check your access and try again.");}
 });
 document.querySelector("#taskForm").addEventListener("submit",async e=>{
   e.preventDefault(); if(!isAdmin)return;
